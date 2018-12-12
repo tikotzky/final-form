@@ -29,7 +29,7 @@ export interface FormSubscription {
   visited?: boolean
 }
 
-export interface FormState {
+export interface FormState<FormData = AnyObject> {
   // by default: all values are subscribed. if subscription is specified, some values may be undefined
   active: undefined | string
   dirty: boolean
@@ -50,16 +50,18 @@ export interface FormState {
   touched?: { [key: string]: boolean }
   valid: boolean
   validating: boolean
-  values: AnyObject
+  values: FormData
   visited?: { [key: string]: boolean }
 }
 
-export type FormSubscriber = Subscriber<FormState>
+export type FormSubscriber<FormData = AnyObject> = Subscriber<
+  FormState<FormData>
+>
 
-export interface FieldState {
+export interface FieldState<Value = any> {
   active?: boolean
   blur: () => void
-  change: (value: any) => void
+  change: (value: Value) => void
   data?: AnyObject
   dirty?: boolean
   dirtySinceLastSubmit?: boolean
@@ -76,7 +78,7 @@ export interface FieldState {
   submitting?: boolean
   touched?: boolean
   valid?: boolean
-  value?: any
+  value?: Value
   visited?: boolean
 }
 
@@ -177,25 +179,30 @@ type ConfigKey =
   | 'validate'
   | 'validateOnBlur'
 
-export interface FormApi {
+export interface FormApi<FormData = AnyObject> {
   batch: (fn: () => void) => void
-  blur: (name: string) => void
-  change: (name: string, value?: any) => void
-  focus: (name: string) => void
-  initialize: (values: object) => void
+  blur: (name: keyof FormData) => void
+  change: <Fieldname extends keyof FormData>(
+    name: Fieldname,
+    value?: FormData[Fieldname]
+  ) => void
+  focus: (name: keyof FormData) => void
+  initialize: (values: Partial<FormData>) => void
   isValidationPaused: () => boolean
-  getFieldState: (field: string) => FieldState | undefined
-  getRegisteredFields: () => string[]
-  getState: () => FormState
+  getFieldState: <Fieldname extends keyof FormData>(
+    field: Fieldname
+  ) => FieldState<FormData[Fieldname]> | undefined
+  getRegisteredFields: () => (keyof FormData)[]
+  getState: () => FormState<FormData>
   mutators: { [key: string]: (...args: any[]) => any }
   pauseValidation: () => void
   registerField: RegisterField
-  reset: (initialValues?: object) => void
+  reset: (initialValues?: Partial<FormData>) => void
   resumeValidation: () => void
   setConfig: (name: ConfigKey, value: any) => void
   submit: () => Promise<object | undefined> | undefined
   subscribe: (
-    subscriber: FormSubscriber,
+    subscriber: FormSubscriber<FormData>,
     subscription: FormSubscription
   ) => Unsubscribe
 }
@@ -253,7 +260,9 @@ export interface Config<FormData = object> {
 
 export type Decorator = (form: FormApi) => Unsubscribe
 
-export function createForm<FormData>(config: Config<FormData>): FormApi
+export function createForm<FormData = AnyObject>(
+  config: Config<FormData>
+): FormApi<FormData>
 export const fieldSubscriptionItems: string[]
 export const formSubscriptionItems: string[]
 export const ARRAY_ERROR: string
